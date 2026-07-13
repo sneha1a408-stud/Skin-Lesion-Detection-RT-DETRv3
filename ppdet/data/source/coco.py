@@ -22,7 +22,7 @@ except Exception:
 import numpy as np
 from ppdet.core.workspace import register, serializable
 from .dataset import DetDataset
-
+from ppdet.modeling.difficulty.difficulty_score import DifficultyScore
 from ppdet.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -75,6 +75,13 @@ class COCODataSet(DetDataset):
         self.load_crowd = load_crowd
         self.allow_empty = allow_empty
         self.empty_ratio = empty_ratio
+        csv_path = os.path.join(
+            "data",
+            "difficulty",
+            "final_difficulty_scores.csv"
+            )
+
+        self.difficulty_module = DifficultyScore(csv_path=csv_path)
 
     def _sample_empty(self, records, num):
         # if empty_ratio is out of [0. ,1.), do not sample the records
@@ -138,6 +145,20 @@ class COCODataSet(DetDataset):
                 'h': im_h,
                 'w': im_w,
             } if 'image' in self.data_fields else {}
+
+            image_name = os.path.basename(im_path)
+
+            difficulty_info = self.difficulty_module.lookup.get(image_name)
+
+            if difficulty_info is None:
+                raise KeyError(
+                    f"Difficulty information not found for image: {image_name}"
+                )
+            
+
+            coco_rec["difficulty_score"] = difficulty_info["difficulty_score"]
+            coco_rec["adaptive_k"] = difficulty_info["adaptive_k"]
+            coco_rec["lambda_div"] = difficulty_info["lambda_div"]
 
             if not self.load_image_only:
                 ins_anno_ids = coco.getAnnIds(

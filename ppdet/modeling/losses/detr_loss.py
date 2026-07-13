@@ -322,7 +322,10 @@ class DETRLoss(nn.Layer):
                              dn_match_indices=None,
                              num_gts=1,
                              decoder_embeddings=None,
-                             gt_score=None):
+                             gt_score=None,
+                             difficulty_score=None,
+                             adaptive_k=None,
+                             lambda_div=None,):
         if dn_match_indices is None:
             match_indices = self.matcher(
                 boxes, logits, gt_bbox, gt_class, masks=masks, gt_mask=gt_mask)
@@ -440,6 +443,10 @@ class DETRLoss(nn.Layer):
         dn_match_indices = kwargs.get("dn_match_indices", None)
         num_gts = kwargs.get("num_gts", None)
         decoder_embeddings = kwargs.get("decoder_embeddings", None)
+        difficulty_score = kwargs.get("difficulty_score", None)
+        adaptive_k = kwargs.get("adaptive_k", None)
+        lambda_div = kwargs.get("lambda_div", None)
+
         if num_gts is None:
             num_gts = self._get_num_gts(gt_class)
 
@@ -454,6 +461,9 @@ class DETRLoss(nn.Layer):
             dn_match_indices=dn_match_indices,
             num_gts=num_gts,
             decoder_embeddings=decoder_embeddings,
+            difficulty_score=difficulty_score,
+            adaptive_k=adaptive_k,
+            lambda_div=lambda_div,
             gt_score=gt_score if gt_score is not None else None)
 
         if self.aux_loss:
