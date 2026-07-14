@@ -553,7 +553,7 @@ class DINOv3Head(nn.Layer):
         self.num_queries_o2m = num_queries_o2m
 
     def forward(self, out_transformer, body_feats, inputs=None):
-        (dec_out_bboxes, dec_out_logits, enc_topk_bboxes, enc_topk_logits,
+        (dec_out_bboxes, dec_out_logits, decoder_embeddings, enc_topk_bboxes, enc_topk_logits,
          dn_meta) = out_transformer
         if self.training:
             assert inputs is not None
@@ -572,11 +572,14 @@ class DINOv3Head(nn.Layer):
 
                     out_bboxes_o2m = paddle.concat([enc_topk_bboxes_o2m.unsqueeze(0), dec_out_bboxes_o2m])
                     out_logits_o2m = paddle.concat([enc_topk_logits_o2m.unsqueeze(0), dec_out_logits_o2m])
+                    decoder_embeddings, decoder_embeddings_o2m = paddle.split(decoder_embeddings, [total_dec_queries - self.num_queries_o2m, self.num_queries_o2m], axis=1)
                     loss_o2m = self.loss(
                         out_bboxes_o2m,
                         out_logits_o2m,
                         inputs['gt_bbox'],
                         inputs['gt_class'],
+                        decoder_embeddings=decoder_embeddings_o2m,
+                        image_ids=inputs["im_id"],
                         dn_out_bboxes=None,
                         dn_out_logits=None,
                         dn_meta=None,
@@ -609,6 +612,8 @@ class DINOv3Head(nn.Layer):
                         out_logits_gid,
                         inputs['gt_bbox'],
                         inputs['gt_class'],
+                        decoder_embeddings=decoder_embeddings,
+                        image_ids=inputs["im_id"],
                         dn_out_bboxes=dn_out_bboxes_gid,
                         dn_out_logits=dn_out_logits_gid,
                         dn_meta=dn_meta[g_id])
@@ -636,6 +641,8 @@ class DINOv3Head(nn.Layer):
                 out_logits,
                 inputs['gt_bbox'],
                 inputs['gt_class'],
+                decoder_embeddings=decoder_embeddings,
+                image_ids=inputs["im_id"],
                 dn_out_bboxes=dn_out_bboxes,
                 dn_out_logits=dn_out_logits,
                 dn_meta=dn_meta,
